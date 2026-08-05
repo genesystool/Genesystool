@@ -21,6 +21,9 @@ import {
   Clock,
   Megaphone,
   SlidersHorizontal,
+  ChevronUp,
+  ChevronDown,
+  Pin,
 } from 'lucide-react';
 import { MenuItem, OpenTarget, AndroidTheme } from '../types/portal';
 import { IconRenderer, AVAILABLE_ICONS } from '../utils/iconHelper';
@@ -72,6 +75,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [activeAdminTab, setActiveAdminTab] = useState<'menus' | 'settings'>('menus');
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
   const [successNotice, setSuccessNotice] = useState<string>('');
   const [errorNotice, setErrorNotice] = useState<string>('');
@@ -162,9 +167,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       };
 
       if (editingId) {
-        // Update Firestore Doc
+        // Upsert Firestore Doc (handles initial fallback items too)
         const itemRef = doc(db, 'menus', editingId);
-        await updateDoc(itemRef, payload);
+        await setDoc(itemRef, payload, { merge: true });
         setSuccessNotice(`Menu "${title}" berhasil diperbarui real-time!`);
       } else {
         // Add new Firestore Doc
@@ -224,33 +229,86 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  const handleDeleteMenu = async (id: string, itemTitle: string) => {
-    if (!window.confirm(`Yakin ingin menghapus menu "${itemTitle}" secara permanen?`)) return;
+  const handleToggleDock = async (item: MenuItem) => {
+    try {
+      const itemRef = doc(db, 'menus', item.id);
+      await setDoc(
+        itemRef,
+        { isDock: !item.isDock, updatedAt: new Date().toISOString() },
+        { merge: true }
+      );
+      setSuccessNotice(
+        `Status Dock "${item.title}" ${!item.isDock ? 'disematkan ke Dock' : 'dilepas dari Dock'}.`
+      );
+      setTimeout(() => setSuccessNotice(''), 3000);
+    } catch (err: any) {
+      console.error('Error updating dock:', err);
+      setErrorNotice('Gagal memperbarui status dock: ' + (err.message || 'Izin ditolak'));
+    }
+  };
+
+  const handleMoveOrder = async (item: MenuItem, direction: 'up' | 'down') => {
+    const currentIndex = menuItems.findIndex((m) => m.id === item.id);
+    if (currentIndex === -1) return;
+
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= menuItems.length) return;
+
+    const targetItem = menuItems[targetIndex];
 
     try {
+      const batch = writeBatch(db);
+      const currentRef = doc(db, 'menus', item.id);
+      const targetRef = doc(db, 'menus', targetItem.id);
+
+      batch.set(
+        currentRef,
+        { order: targetItem.order, updatedAt: new Date().toISOString() },
+        { merge: true }
+      );
+      batch.set(
+        targetRef,
+        { order: item.order, updatedAt: new Date().toISOString() },
+        { merge: true }
+      );
+
+      await batch.commit();
+      setSuccessNotice(`Urutan "${item.title}" berhasil dipindahkan secara real-time.`);
+      setTimeout(() => setSuccessNotice(''), 3000);
+    } catch (err: any) {
+      console.error('Error changing order:', err);
+      setErrorNotice('Gagal mengubah urutan: ' + (err.message || 'Izin ditolak'));
+    }
+  };
+
+  const performDeleteMenu = async (id: string, itemTitle: string) => {
+    setDeletingId(id);
+    setErrorNotice('');
+    setSuccessNotice('');
+
+    try {
+      // Always mark portal initialized so empty collection won't re-seed
+      await setDoc(doc(db, 'settings', 'portal'), { initialized: true }, { merge: true });
       await deleteDoc(doc(db, 'menus', id));
+
       setSuccessNotice(`Menu "${itemTitle}" berhasil dihapus secara real-time.`);
+      setDeleteConfirmId(null);
       setTimeout(() => setSuccessNotice(''), 4000);
     } catch (err: any) {
       console.error('Error deleting menu:', err);
-      setErrorNotice('Gagal menghapus menu: ' + err.message);
+      setErrorNotice('Gagal menghapus menu: ' + (err.message || 'Izin ditolak'));
+    } finally {
+      setDeletingId(null);
     }
   };
 
   const handleSeedDefaults = async () => {
-    if (
-      menuItems.length > 0 &&
-      !window.confirm('Ini akan menambahkan kumpulan menu default ke database Anda. Lanjutkan?')
-    ) {
-      return;
-    }
-
     setIsSubmitting(true);
     setErrorNotice('');
     try {
       const batch = writeBatch(db);
       INITIAL_MENUS.forEach((item, index) => {
-        const docRef = doc(collection(db, 'menus'));
+        const docRef = doc(db, 'menus', `initial-${index + 1}`);
         batch.set(docRef, {
           ...item,
           order: index + 1,
@@ -258,6 +316,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           updatedAt: new Date().toISOString(),
         });
       });
+      await setDoc(doc(db, 'settings', 'portal'), { initialized: true }, { merge: true });
 
       await batch.commit();
       setIsSubmitting(false);
@@ -545,10 +604,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {menuItems.map((item) => (
+                  {menuItems.map((item, index) => (
                     <div
                       key={item.id}
-                      className={`p-3.5 bg-white/5 hover:bg-white/10 rounded-2xl border transition flex items-center justify-between gap-3 ${
+                      className={`p-3.5 bg-white/5 hover:bg-white/10 rounded-2xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                         editingId === item.id ? 'border-amber-400 bg-amber-500/10' : 'border-white/10'
                       }`}
                     >
@@ -559,14 +618,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <IconRenderer name={item.icon} size={20} />
                         </div>
                         <div className="truncate">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-bold text-sm text-white truncate">{item.title}</span>
                             <span className="text-[10px] bg-white/10 text-white/70 px-2 py-0.5 rounded-full font-medium">
                               #{item.order}
                             </span>
                             {item.isDock && (
-                              <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.2 rounded-full font-semibold">
-                                Dock
+                              <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.2 rounded-full font-semibold flex items-center gap-1">
+                                <Pin size={10} /> Dock
                               </span>
                             )}
                             {item.badge && (
@@ -581,22 +640,97 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-2 shrink-0">
+                      <div className="flex items-center space-x-1 sm:space-x-1.5 shrink-0 justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
+                        {/* Naikkan Urutan */}
                         <button
+                          type="button"
+                          onClick={() => handleMoveOrder(item, 'up')}
+                          disabled={index === 0}
+                          className="p-2 bg-white/10 hover:bg-white/20 disabled:opacity-20 disabled:cursor-not-allowed text-white rounded-xl transition"
+                          title="Naikkan Urutan Atas"
+                        >
+                          <ChevronUp size={15} />
+                        </button>
+
+                        {/* Turunkan Urutan */}
+                        <button
+                          type="button"
+                          onClick={() => handleMoveOrder(item, 'down')}
+                          disabled={index === menuItems.length - 1}
+                          className="p-2 bg-white/10 hover:bg-white/20 disabled:opacity-20 disabled:cursor-not-allowed text-white rounded-xl transition"
+                          title="Turunkan Urutan Bawah"
+                        >
+                          <ChevronDown size={15} />
+                        </button>
+
+                        {/* Toggle Dock */}
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDock(item)}
+                          className={`p-2 rounded-xl transition ${
+                            item.isDock
+                              ? 'bg-amber-500 text-black font-bold shadow'
+                              : 'bg-white/10 hover:bg-white/20 text-white/70'
+                          }`}
+                          title={item.isDock ? 'Lepas dari Dock' : 'Sematkan ke Dock'}
+                        >
+                          <Pin size={15} />
+                        </button>
+
+                        {/* Uji Link URL */}
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 bg-white/10 hover:bg-white/20 text-white/80 hover:text-white rounded-xl transition flex items-center justify-center"
+                          title="Uji / Buka Link URL"
+                        >
+                          <ExternalLink size={15} />
+                        </a>
+
+                        {/* Edit Menu */}
+                        <button
+                          type="button"
                           onClick={() => handleEditClick(item)}
-                          className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition"
+                          className="p-2 bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-black rounded-xl transition font-semibold"
                           title="Edit Menu Ini"
                         >
                           <Pencil size={15} />
                         </button>
 
-                        <button
-                          onClick={() => handleDeleteMenu(item.id, item.title)}
-                          className="p-2 bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white rounded-xl transition"
-                          title="Hapus Menu"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        {/* Hapus Menu */}
+                        {deleteConfirmId === item.id ? (
+                          <div className="flex items-center gap-1.5 bg-red-500/20 border border-red-500/40 p-1 rounded-xl animate-fadeIn">
+                            <span className="text-[11px] text-red-300 font-semibold px-1">
+                              Hapus?
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => performDeleteMenu(item.id, item.title)}
+                              disabled={deletingId === item.id}
+                              className="px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-lg transition shadow flex items-center gap-1"
+                            >
+                              {deletingId === item.id ? '...' : 'Ya'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeleteConfirmId(null)}
+                              disabled={deletingId === item.id}
+                              className="px-2 py-1 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-xs rounded-lg transition"
+                            >
+                              Batal
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setDeleteConfirmId(item.id)}
+                            className="p-2 bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white rounded-xl transition"
+                            title="Hapus Menu"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}

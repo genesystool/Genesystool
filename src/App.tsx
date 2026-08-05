@@ -11,6 +11,9 @@ import {
   query,
   orderBy,
   doc,
+  getDoc,
+  setDoc,
+  writeBatch,
 } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 
@@ -97,12 +100,12 @@ export default function App() {
 
     const unsubscribeFirestore = onSnapshot(
       q,
-      (snapshot) => {
+      async (snapshot) => {
         const items: MenuItem[] = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
           items.push({
-            id: doc.id,
+            id: docSnap.id,
             title: data.title || 'Untitled',
             description: data.description || '',
             icon: data.icon || 'LayoutDashboard',
@@ -118,13 +121,43 @@ export default function App() {
           });
         });
 
-        // Fallback to initial sample items if Firestore is completely empty
-        if (items.length === 0) {
-          const fallbackItems: MenuItem[] = INITIAL_MENUS.map((item, index) => ({
-            ...item,
-            id: `initial-${index + 1}`,
-          }));
-          setMenuItems(fallbackItems);
+        if (snapshot.empty) {
+          // Check if database was initialized before (to know if empty is intentional by user deleting menus)
+          try {
+            const settingsSnap = await getDoc(doc(db, 'settings', 'portal'));
+            if (settingsSnap.exists() && settingsSnap.data()?.initialized) {
+              setMenuItems([]);
+              setLoading(false);
+              return;
+            }
+          } catch (e) {
+            console.warn('Error reading portal settings init:', e);
+          }
+
+          // Database is fresh/uninitialized -> seed defaults into Firestore
+          try {
+            const batch = writeBatch(db);
+            INITIAL_MENUS.forEach((item, index) => {
+              const docRef = doc(db, 'menus', `initial-${index + 1}`);
+              batch.set(docRef, {
+                ...item,
+                order: index + 1,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              });
+            });
+            await setDoc(doc(db, 'settings', 'portal'), { initialized: true }, { merge: true });
+            await batch.commit();
+            // batch commit will automatically re-trigger onSnapshot
+            return;
+          } catch (seedErr) {
+            console.error('Auto-seed failed:', seedErr);
+            const fallbackItems: MenuItem[] = INITIAL_MENUS.map((item, index) => ({
+              ...item,
+              id: `initial-${index + 1}`,
+            }));
+            setMenuItems(fallbackItems);
+          }
         } else {
           setMenuItems(items);
         }
@@ -132,7 +165,6 @@ export default function App() {
       },
       (error) => {
         console.error('Firestore snapshot error:', error);
-        // Fallback on error to keep app interactive
         const fallbackItems: MenuItem[] = INITIAL_MENUS.map((item, index) => ({
           ...item,
           id: `fallback-${index + 1}`,
