@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import {
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   signInAnonymously,
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
@@ -28,7 +27,6 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
 }) => {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
-  const [isRegisterMode, setIsRegisterMode] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -51,17 +49,8 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
     const rawPass = password.trim();
     const targetEmail = sanitizeEmail(rawUser);
 
-    // Check if user is using default admin credentials
-    const isDefaultAdmin =
-      (rawUser.toLowerCase() === 'admin' || targetEmail === 'admin@portal.id') &&
-      rawPass === '@Mautauaja1';
-
     try {
-      if (isRegisterMode) {
-        await createUserWithEmailAndPassword(auth, targetEmail, rawPass);
-      } else {
-        await signInWithEmailAndPassword(auth, targetEmail, rawPass);
-      }
+      await signInWithEmailAndPassword(auth, targetEmail, rawPass);
       setLoading(false);
       onSuccessLogin();
     } catch (err: any) {
@@ -87,9 +76,9 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
         err.code === 'auth/user-not-found' ||
         err.code === 'auth/wrong-password'
       ) {
-        msg = 'User atau password salah. Silakan periksa kembali atau buat akun baru.';
+        msg = 'User atau password salah. Silakan periksa kembali.';
       } else if (err.code === 'auth/email-already-in-use') {
-        msg = 'Email/User ini sudah terdaftar. Silakan gunakan mode Masuk Login.';
+        msg = 'Email/User ini sudah terdaftar.';
       } else if (err.code === 'auth/weak-password') {
         msg = 'Password terlalu lemah. Minimal 6 karakter.';
       }
@@ -117,7 +106,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
               <div>
                 <h3 className="font-bold text-base">Autentikasi Dasbor Admin</h3>
                 <p className="text-[11px] text-white/50">
-                  {isRegisterMode ? 'Buat Akun Admin Baru' : 'Akses Terproteksi Firebase Auth'}
+                  Akses Terproteksi Firebase Auth
                 </p>
               </div>
             </div>
@@ -181,26 +170,12 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
                 <span className="animate-pulse">Memproses Autentikasi...</span>
               ) : (
                 <>
-                  <span>{isRegisterMode ? 'Daftar Admin Baru' : 'Masuk Ke Dasbor Admin'}</span>
+                  <span>Masuk Ke Dasbor Admin</span>
                   <ArrowRight size={16} />
                 </>
               )}
             </button>
           </form>
-
-          {/* Toggle Register */}
-          <div className="mt-5 pt-4 border-t border-white/10 flex flex-col gap-2">
-            <div className="text-center">
-              <button
-                onClick={() => setIsRegisterMode(!isRegisterMode)}
-                className="text-xs text-white/60 hover:text-white underline"
-              >
-                {isRegisterMode
-                  ? 'Sudah punya akun? Masuk di sini'
-                  : 'Belum punya akun admin? Buat akun admin baru'}
-              </button>
-            </div>
-          </div>
         </motion.div>
       </div>
     </AnimatePresence>

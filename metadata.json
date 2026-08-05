@@ -1,5 +1,5 @@
 {
-  "name": "Portal Launcher Android",
+  "name": "Genesystool App",
   "description": "Portal responsive dengan antarmuka menu bergaya Android, manajemen menu real-time dari dasbor admin (akses via Ctrl+Shift+Alt+A), autentikasi, dan database Firestore.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
