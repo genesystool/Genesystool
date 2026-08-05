@@ -1,0 +1,23 @@
+{
+  "entities": {
+    "menus": {
+      "title": "Portal Menus",
+      "description": "Android Launcher menu app items",
+      "properties": {
+        "title": { "type": "string", "description": "Menu title" },
+        "description": { "type": "string", "description": "Menu description" },
+        "icon": { "type": "string", "description": "Lucide icon name or image URL" },
+        "category": { "type": "string", "description": "Category name" },
+        "url": { "type": "string", "description": "App or link URL" },
+        "target": { "type": "string", "description": "_blank, iframe, or modal" },
+        "color": { "type": "string", "description": "Theme or icon background color" },
+        "order": { "type": "number", "description": "Display order in grid" },
+        "isDock": { "type": "boolean", "description": "Pinned to bottom dock" },
+        "badge": { "type": "string", "description": "Badge text" },
+        "createdAt": { "type": "string", "description": "ISO creation time" },
+        "updatedAt": { "type": "string", "description": "ISO updated time" }
+      },
+      "required": ["title", "category", "url", "order"]
+    }
+  }
+}
