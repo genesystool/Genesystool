@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Sun, Cloud, Calendar, Sparkles, SlidersHorizontal, Layers } from 'lucide-react';
+import { Search, Sun, Cloud, Calendar, Sparkles, Megaphone, Layers, Clock, Heart } from 'lucide-react';
 import { AndroidTheme } from '../types/portal';
 
 interface WidgetsProps {
@@ -44,20 +44,49 @@ export const Widgets: React.FC<WidgetsProps> = ({
 
   if (!theme.showWidgets) return null;
 
+  const showClock = theme.showClock !== false;
+  const showInfoTicker = theme.showInfoTicker !== false && theme.infoText && theme.infoText.trim().length > 0;
+
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-4 space-y-4 select-none">
-      {/* Main Clock & Weather Android Card */}
-      <div className="bg-black/35 backdrop-blur-xl border border-white/10 rounded-3xl p-6 text-white shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 transition hover:border-white/20">
-        {/* Left: Clock */}
-        <div className="flex flex-col items-center md:items-start text-center md:text-left">
-          <div className="text-5xl sm:text-6xl font-light tracking-tight text-white font-mono drop-shadow-md">
-            {timeFormatted}
+      {/* Admin Announcement Ticker / Information Banner */}
+      {showInfoTicker && (
+        <div className="bg-gradient-to-r from-amber-500/20 via-orange-500/10 to-amber-500/20 backdrop-blur-xl border border-amber-500/40 rounded-2xl p-3 text-white shadow-xl flex items-center gap-3">
+          <div className="p-2 bg-amber-500 text-black rounded-xl shrink-0 font-bold shadow-md animate-pulse">
+            <Megaphone size={16} />
           </div>
-          <div className="flex items-center gap-2 text-white/80 text-sm mt-1 font-medium">
-            <Calendar size={15} className="text-amber-400" />
-            <span>{dateFormatted}</span>
+          <div className="flex-1 overflow-hidden">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-extrabold tracking-wider uppercase text-amber-300 bg-black/40 px-2 py-0.5 rounded border border-amber-500/30">
+                PENGUMUMAN ADMIN
+              </span>
+            </div>
+            <p className="text-xs text-amber-100 font-medium truncate mt-0.5">
+              {theme.infoText}
+            </p>
           </div>
         </div>
+      )}
+
+      {/* Main Clock & Weather Android Card */}
+      <div className="bg-black/35 backdrop-blur-xl border border-white/10 rounded-3xl p-6 text-white shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 transition hover:border-white/20">
+        {/* Left: Clock (Conditional Display) */}
+        {showClock ? (
+          <div className="flex flex-col items-center md:items-start text-center md:text-left">
+            <div className="text-5xl sm:text-6xl font-light tracking-tight text-white font-mono drop-shadow-md">
+              {timeFormatted}
+            </div>
+            <div className="flex items-center gap-2 text-white/80 text-sm mt-1 font-medium">
+              <Calendar size={15} className="text-amber-400" />
+              <span>{dateFormatted}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-4 py-2.5 rounded-2xl text-xs text-white/70">
+            <Clock size={16} className="text-amber-400 shrink-0" />
+            <span>Tampilan Jam Disembunyikan (Atur di Admin/Settings)</span>
+          </div>
+        )}
 
         {/* Center: Weather & Location */}
         <div className="flex items-center gap-4 bg-white/5 border border-white/10 px-5 py-3 rounded-2xl">
@@ -72,20 +101,17 @@ export const Widgets: React.FC<WidgetsProps> = ({
           </div>
         </div>
 
-        {/* Right: Portal Quick Info */}
-        <div className="hidden lg:flex flex-col items-end text-right">
-          <div className="flex items-center gap-2 text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full">
-            <Sparkles size={13} />
-            <span>{totalApps} Menu Terhubung</span>
+        {/* Right: Donation Info & Portal Link */}
+        <div className="flex flex-col items-center md:items-end text-center md:text-right">
+          <div className="flex items-center gap-2 text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-3.5 py-1.5 rounded-2xl shadow-md">
+            <Heart size={14} className="text-rose-400 shrink-0 animate-pulse" />
+            <span>Jika aplikasi ini berguna donasi seikhlasnya ke akun Dana 085270444156</span>
           </div>
-          <p className="text-[11px] text-white/60 mt-2">
-            Pusat Akses Layanan Portal
-          </p>
           <button
             onClick={onOpenAdmin}
-            className="mt-2 text-xs text-amber-400 hover:text-amber-300 underline flex items-center gap-1 font-medium"
+            className="mt-1.5 text-xs text-amber-400 hover:text-amber-300 underline flex items-center gap-1 font-medium"
           >
-            Kelola Menu (Ctrl+Shift+Alt+A)
+            Kelola Portal (Ctrl+Shift+Alt+A)
           </button>
         </div>
       </div>

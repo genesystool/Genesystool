@@ -18,8 +18,11 @@ import {
   ArrowUpDown,
   Database,
   Eye,
+  Clock,
+  Megaphone,
+  SlidersHorizontal,
 } from 'lucide-react';
-import { MenuItem, OpenTarget } from '../types/portal';
+import { MenuItem, OpenTarget, AndroidTheme } from '../types/portal';
 import { IconRenderer, AVAILABLE_ICONS } from '../utils/iconHelper';
 import { db, auth } from '../lib/firebase';
 import {
@@ -29,7 +32,7 @@ import {
   deleteDoc,
   doc,
   writeBatch,
-  serverTimestamp,
+  setDoc,
 } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { INITIAL_MENUS } from '../data/initialMenus';
@@ -39,6 +42,8 @@ interface AdminDashboardProps {
   onClose: () => void;
   menuItems: MenuItem[];
   userEmail: string | null;
+  theme?: AndroidTheme;
+  onUpdateTheme?: (updated: Partial<AndroidTheme>) => void;
 }
 
 const COLOR_PRESETS = [
@@ -61,14 +66,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onClose,
   menuItems,
   userEmail,
+  theme,
+  onUpdateTheme,
 }) => {
+  const [activeAdminTab, setActiveAdminTab] = useState<'menus' | 'settings'>('menus');
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
   const [successNotice, setSuccessNotice] = useState<string>('');
   const [errorNotice, setErrorNotice] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  // Form State
+  // Form State for Menus
   const [title, setTitle] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [icon, setIcon] = useState<string>('LayoutDashboard');
@@ -79,6 +88,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [order, setOrder] = useState<number>(menuItems.length + 1);
   const [isDock, setIsDock] = useState<boolean>(false);
   const [badge, setBadge] = useState<string>('');
+
+  // Settings State
+  const [showClockLocal, setShowClockLocal] = useState<boolean>(
+    theme?.showClock !== false
+  );
+  const [showInfoTickerLocal, setShowInfoTickerLocal] = useState<boolean>(
+    theme?.showInfoTicker !== false
+  );
+  const [infoTextLocal, setInfoTextLocal] = useState<string>(
+    theme?.infoText || 'Selamat datang di Portal Utama. Pengumuman: Akses aplikasi internal aktif.'
+  );
+  const [showWidgetsLocal, setShowWidgetsLocal] = useState<boolean>(
+    theme?.showWidgets !== false
+  );
 
   if (!isOpen) return null;
 
@@ -160,6 +183,44 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       console.error('Error saving menu:', err);
       setErrorNotice('Gagal menyimpan menu ke Firestore: ' + (err.message || 'Izin ditolak'));
       setIsSubmitting(false);
+    }
+  };
+
+  const handleSavePortalSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setErrorNotice('');
+    setSuccessNotice('');
+
+    const updatedSettings = {
+      showClock: showClockLocal,
+      showInfoTicker: showInfoTickerLocal,
+      infoText: infoTextLocal,
+      showWidgets: showWidgetsLocal,
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      // 1. Update Firestore doc `settings/portal`
+      await setDoc(doc(db, 'settings', 'portal'), updatedSettings, { merge: true });
+
+      // 2. Update local state
+      if (onUpdateTheme) {
+        onUpdateTheme(updatedSettings);
+      }
+
+      setIsSubmitting(false);
+      setSuccessNotice('Pengaturan Info & Jam berhasil disimpan ke Firestore secara real-time!');
+      setTimeout(() => setSuccessNotice(''), 4000);
+    } catch (err: any) {
+      console.error('Error saving settings to Firestore:', err);
+      // Fallback local update if Firestore permissions error
+      if (onUpdateTheme) {
+        onUpdateTheme(updatedSettings);
+      }
+      setIsSubmitting(false);
+      setSuccessNotice('Pengaturan Info & Jam berhasil diperbarui lokal!');
+      setTimeout(() => setSuccessNotice(''), 4000);
     }
   };
 
@@ -261,6 +322,40 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </div>
 
+          {/* Sub-Header Tab Bar */}
+          <div className="bg-slate-900/80 border-b border-white/10 px-6 py-2 flex items-center justify-between gap-4 shrink-0">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setActiveAdminTab('menus')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+                  activeAdminTab === 'menus'
+                    ? 'bg-amber-500 text-black shadow-md'
+                    : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <LayoutGrid size={15} /> Kelola Menu Portal ({menuItems.length})
+              </button>
+
+              <button
+                onClick={() => setActiveAdminTab('settings')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+                  activeAdminTab === 'settings'
+                    ? 'bg-amber-500 text-black shadow-md'
+                    : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <SlidersHorizontal size={15} /> Pengaturan Info & Jam Portal
+              </button>
+            </div>
+
+            {/* Quick Admin Credentials Reference */}
+            <div className="hidden sm:flex items-center gap-2 text-[11px] bg-black/40 border border-amber-500/30 px-3 py-1 rounded-xl text-amber-300 font-mono">
+              <span>ADMIN: <strong>admin</strong></span>
+              <span className="text-white/30">|</span>
+              <span>PASS: <strong>@Mautauaja1</strong></span>
+            </div>
+          </div>
+
           {/* Alert Notices */}
           {successNotice && (
             <div className="bg-emerald-500/20 border-b border-emerald-500/40 px-6 py-2.5 text-emerald-300 text-xs font-semibold flex items-center gap-2 shrink-0">
@@ -277,7 +372,128 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           )}
 
           {/* Main Body */}
-          <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+          {activeAdminTab === 'settings' ? (
+            <div className="flex-1 overflow-y-auto p-6 max-w-3xl mx-auto w-full space-y-6">
+              <div className="bg-white/5 border border-white/10 rounded-3xl p-6 space-y-6">
+                <div>
+                  <h3 className="font-bold text-lg text-white flex items-center gap-2">
+                    <SlidersHorizontal className="text-amber-400" size={20} />
+                    Pengaturan Tampilan Jam & Informasi Admin
+                  </h3>
+                  <p className="text-xs text-white/60 mt-1">
+                    Atur visibilitas jam, pengumuman portal, dan bar widget secara langsung ke Firestore.
+                  </p>
+                </div>
+
+                <form onSubmit={handleSavePortalSettings} className="space-y-5">
+                  {/* Info Ticker Toggle */}
+                  <div className="flex items-center justify-between p-4 bg-black/40 rounded-2xl border border-white/10">
+                    <div>
+                      <div className="text-sm font-bold text-white flex items-center gap-1.5">
+                        <Megaphone size={16} className="text-amber-400" /> Tampilkan Bar Pengumuman Admin
+                      </div>
+                      <div className="text-xs text-white/60 mt-0.5">
+                        Menampilkan banner running text informasi di atas widget utama.
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={showInfoTickerLocal}
+                      onChange={(e) => setShowInfoTickerLocal(e.target.checked)}
+                      className="w-5 h-5 accent-amber-500 rounded cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Info Text Content */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-white/80 block">
+                      Teks Informasi / Pengumuman Admin
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={infoTextLocal}
+                      onChange={(e) => setInfoTextLocal(e.target.value)}
+                      placeholder="Masukkan teks pengumuman yang akan ditampilkan kepada seluruh pengguna..."
+                      className="w-full bg-black/40 border border-white/20 rounded-2xl p-3 text-xs text-white placeholder-white/30 focus:outline-none focus:border-amber-400"
+                    />
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <span className="text-[10px] text-white/50 self-center">Preset Cepat:</span>
+                      <button
+                        type="button"
+                        onClick={() => setInfoTextLocal('Selamat datang di Portal Utama. Pengumuman: Akses aplikasi internal aktif.')}
+                        className="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1 rounded-lg text-white/80 transition"
+                      >
+                        Selamat Datang
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInfoTextLocal('Maintenance server terjadwal hari ini pukul 22:00 WIB. Mohon simpan pekerjaan Anda.')}
+                        className="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1 rounded-lg text-white/80 transition"
+                      >
+                        Maintenance Server
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInfoTextLocal('Sistem Portal Berjalan Normal. Silakan akses menu yang tersedia.')}
+                        className="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1 rounded-lg text-white/80 transition"
+                      >
+                        Sistem Normal
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Show Clock Toggle */}
+                  <div className="flex items-center justify-between p-4 bg-black/40 rounded-2xl border border-white/10">
+                    <div>
+                      <div className="text-sm font-bold text-white flex items-center gap-1.5">
+                        <Clock size={16} className="text-amber-400" /> Tampilkan Jam Digital Android
+                      </div>
+                      <div className="text-xs text-white/60 mt-0.5">
+                        Pilih "Tidak" jika ingin menyembunyikan jam dari tampilan layar depan.
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={showClockLocal}
+                      onChange={(e) => setShowClockLocal(e.target.checked)}
+                      className="w-5 h-5 accent-amber-500 rounded cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Show Widgets Toggle */}
+                  <div className="flex items-center justify-between p-4 bg-black/40 rounded-2xl border border-white/10">
+                    <div>
+                      <div className="text-sm font-bold text-white flex items-center gap-1.5">
+                        <LayoutGrid size={16} className="text-amber-400" /> Tampilkan Seluruh Widget Bar
+                      </div>
+                      <div className="text-xs text-white/60 mt-0.5">
+                        Menyembunyikan atau menampilkan seluruh bar widget atas.
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={showWidgetsLocal}
+                      onChange={(e) => setShowWidgetsLocal(e.target.checked)}
+                      className="w-5 h-5 accent-amber-500 rounded cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Submit Button */}
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-black font-extrabold rounded-2xl text-xs shadow-xl transition active:scale-95 flex items-center justify-center gap-2"
+                    >
+                      <Save size={16} />
+                      <span>{isSubmitting ? 'Menyimpan...' : 'Simpan Pengaturan Ke Firestore Real-Time'}</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
             {/* Left / Top Controls & Item List */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 border-r border-white/10 space-y-4 no-scrollbar">
               <div className="flex items-center justify-between">
@@ -583,7 +799,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               )}
             </AnimatePresence>
           </div>
-        </motion.div>
+        )}
+      </motion.div>
       </div>
     </AnimatePresence>
   );

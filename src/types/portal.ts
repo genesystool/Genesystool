@@ -27,6 +27,9 @@ export interface AndroidTheme {
   gridSize: GridRowsCols;
   accentColor: string;
   showWidgets: boolean;
+  showClock: boolean;
+  showInfoTicker: boolean;
+  infoText: string;
   clockStyle: 'digital' | 'analog' | 'minimal';
 }
 

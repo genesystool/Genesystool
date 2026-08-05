@@ -159,18 +159,67 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </div>
 
-            {/* Widgets Toggle */}
-            <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
-              <div>
-                <div className="text-sm font-semibold">Tampilkan Widget Android</div>
-                <div className="text-xs text-white/60">Jam, cuaca, dan pencarian cepat</div>
+            {/* Widgets & Clock Toggle */}
+            <div className="space-y-3">
+              <label className="text-xs font-bold text-white/60 uppercase tracking-wider block mb-1">
+                Pengaturan Widget & Informasi
+              </label>
+
+              {/* Toggle Show Widgets */}
+              <div className="flex items-center justify-between p-3.5 bg-white/5 rounded-2xl border border-white/10">
+                <div>
+                  <div className="text-xs font-semibold">Tampilkan Bar Widget Android</div>
+                  <div className="text-[11px] text-white/60">Jam, cuaca, dan pencarian cepat</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={theme.showWidgets}
+                  onChange={(e) => onUpdateTheme({ showWidgets: e.target.checked })}
+                  className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                />
               </div>
-              <input
-                type="checkbox"
-                checked={theme.showWidgets}
-                onChange={(e) => onUpdateTheme({ showWidgets: e.target.checked })}
-                className="w-5 h-5 accent-amber-500 rounded cursor-pointer"
-              />
+
+              {/* Toggle Show Clock */}
+              <div className="flex items-center justify-between p-3.5 bg-white/5 rounded-2xl border border-white/10">
+                <div>
+                  <div className="text-xs font-semibold">Tampilkan Jam Digital</div>
+                  <div className="text-[11px] text-white/60">Sembunyikan atau tampilkan jam pada widget</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={theme.showClock !== false}
+                  onChange={(e) => onUpdateTheme({ showClock: e.target.checked })}
+                  className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                />
+              </div>
+
+              {/* Toggle Show Info Ticker */}
+              <div className="flex items-center justify-between p-3.5 bg-white/5 rounded-2xl border border-white/10">
+                <div>
+                  <div className="text-xs font-semibold">Tampilkan Running Info / Pengumuman</div>
+                  <div className="text-[11px] text-white/60">Bar pesan pengumuman dari admin</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={theme.showInfoTicker !== false}
+                  onChange={(e) => onUpdateTheme({ showInfoTicker: e.target.checked })}
+                  className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                />
+              </div>
+
+              {/* Info Text Input */}
+              <div className="p-3.5 bg-white/5 rounded-2xl border border-white/10 space-y-1.5">
+                <label className="text-xs font-semibold block text-white/80">
+                  Teks Pengumuman Admin
+                </label>
+                <input
+                  type="text"
+                  value={theme.infoText || ''}
+                  onChange={(e) => onUpdateTheme({ infoText: e.target.value })}
+                  placeholder="Atur pesan pengumuman portal..."
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-amber-400"
+                />
+              </div>
             </div>
 
             {/* Admin Key Shortcut Info */}

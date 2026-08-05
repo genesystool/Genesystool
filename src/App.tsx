@@ -10,6 +10,7 @@ import {
   onSnapshot,
   query,
   orderBy,
+  doc,
 } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 
@@ -57,6 +58,9 @@ export default function App() {
     gridSize: '4x5',
     accentColor: '#f59e0b',
     showWidgets: true,
+    showClock: true,
+    showInfoTicker: true,
+    infoText: 'Selamat datang di Portal Utama. Pengumuman: Akses aplikasi internal aktif.',
     clockStyle: 'digital',
   });
 
@@ -139,6 +143,30 @@ export default function App() {
     );
 
     return () => unsubscribeFirestore();
+  }, []);
+
+  // 3. Real-Time Firestore Settings Listener (Portal Info & Clock Toggles)
+  useEffect(() => {
+    const unsubSettings = onSnapshot(
+      doc(db, 'settings', 'portal'),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setTheme((prev) => ({
+            ...prev,
+            showClock: data.showClock !== undefined ? Boolean(data.showClock) : prev.showClock,
+            showInfoTicker: data.showInfoTicker !== undefined ? Boolean(data.showInfoTicker) : prev.showInfoTicker,
+            infoText: data.infoText !== undefined ? String(data.infoText) : prev.infoText,
+            showWidgets: data.showWidgets !== undefined ? Boolean(data.showWidgets) : prev.showWidgets,
+          }));
+        }
+      },
+      (error) => {
+        console.error('Firestore settings snapshot error:', error);
+      }
+    );
+
+    return () => unsubSettings();
   }, []);
 
   // 3. Global Shortcut Key Handler: Ctrl + Shift + Alt + A
@@ -332,6 +360,8 @@ export default function App() {
         onClose={() => setIsAdminDashboardOpen(false)}
         menuItems={menuItems}
         userEmail={currentUser?.email || null}
+        theme={theme}
+        onUpdateTheme={(updated) => setTheme({ ...theme, ...updated })}
       />
     </div>
   );
