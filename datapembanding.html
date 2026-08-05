@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banding Data SIK NG - PKH</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/introjs.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/intro.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        
+        .file-drop-area {
+            border: 2px dashed #cbd5e1;
+            transition: all 0.3s ease;
+        }
+        
+        .file-drop-area.drag-over {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+        
+        .table-container {
+            max-height: 500px;
+            overflow-y: auto;
+            position: relative; /* Needed for sticky headers/columns */
+        }
+        
+        /* Custom scrollbar for table */
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+            border-radius: 4px;
+        }
+        .table-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+
+        /* Sticky positioning for table */
+        thead th {
+            position: sticky;
+            top: 0;
+            background-color: #f1f5f9;
+            z-index: 20;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        /* Make first column (index) sticky */
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            background-color: white;
+            z-index: 10;
+        }
+        
+        thead th.sticky-col {
+            z-index: 30; /* Header + First column overlap */
+            background-color: #f1f5f9;
+        }
+
+        /* Customize Intro.js */
+        .introjs-tooltip {
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+        .introjs-button {
+            border-radius: 6px;
+            text-shadow: none;
+            padding: 8px 16px;
+        }
+        .introjs-nextbutton {
+            background-color: #2563eb;
+            color: white;
+            border-color: #1d4ed8;
+        }
+        .introjs-nextbutton:hover {
+            background-color: #1d4ed8;
+            color: white;
+            border-color: #1e40af;
+        }
+        .introjs-disabled {
+            background-color: #e2e8f0 !important;
+            color: #94a3b8 !important;
+            border-color: #cbd5e1 !important;
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col">
+
+    <header class="bg-gradient-to-r from-blue-700 to-blue-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white/20 p-2 rounded-lg">
+                    <i class="fa-solid fa-code-compare text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold leading-tight">Bandingkan Data SIK NG</h1>
+                    <p class="text-blue-200 text-sm">Alat bantu untuk mencari data PKH yang tidak tersalur</p>
+                </div>
+            </div>
+            <button id="start-tour" class="bg-white text-blue-700 hover:bg-blue-50 px-4 py-2.5 rounded-lg font-semibold transition-colors text-sm flex items-center space-x-2 shadow-sm border border-blue-100 whitespace-nowrap">
+                <i class="fa-solid fa-circle-play text-blue-600"></i>
+                <span>Cara Penggunaan</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 flex-grow max-w-6xl">
+        
+        <!-- Info Card -->
+        <div class="bg-white rounded-2xl shadow-sm p-6 mb-8 border border-slate-200" id="step1-info" data-title="Persiapan Data" data-intro="Sebelum mulai, Anda perlu mendownload dua file CSV dari web SIK NG pada menu Monitoring. Baca panduan ini untuk mengetahui cara mendapatkan datanya.">
+            <h2 class="text-lg font-bold mb-4 flex items-center text-slate-800">
+                <div class="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center mr-3">
+                    <i class="fa-solid fa-book-open text-sm"></i>
+                </div>
+                Cara Mengambil Data dari SIK NG
+            </h2>
+            <div class="grid md:grid-cols-2 gap-6 text-sm text-slate-600">
+                <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 relative overflow-hidden group hover:border-blue-300 transition-colors">
+                    <div class="absolute top-0 right-0 bg-slate-200 text-slate-500 text-xs font-bold px-3 py-1 rounded-bl-lg">FILE 1</div>
+                    <h3 class="font-bold text-slate-800 mb-3 text-base">Periode Sebelumnya (Patokan)</h3>
+                    <ul class="space-y-2">
+                        <li class="flex"><i class="fa-solid fa-caret-right text-blue-500 mt-1 mr-2"></i> Buka Menu <strong>Monitoring</strong> &rarr; Pilih <strong>Semua Cluster</strong>.</li>
+                        <li class="flex"><i class="fa-solid fa-caret-right text-blue-500 mt-1 mr-2"></i> Pilih Bansos <strong>PKH</strong>.</li>
+                        <li class="flex"><i class="fa-solid fa-caret-right text-blue-500 mt-1 mr-2"></i> Pilih <strong>Periode Sebelumnya</strong> (Misal: Tahap 2).</li>
+                        <li class="flex"><i class="fa-solid fa-caret-right text-blue-500 mt-1 mr-2"></i> Status Salur: Pilih <strong>Sudah Transaksi</strong>.</li>
+                        <li class="flex"><i class="fa-solid fa-caret-right text-blue-500 mt-1 mr-2"></i> Download data (Format CSV).</li>
+                    </ul>
+                </div>
+                <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 relative overflow-hidden group hover:border-emerald-300 transition-colors">
+                    <div class="absolute top-0 right-0 bg-slate-200 text-slate-500 text-xs font-bold px-3 py-1 rounded-bl-lg">FILE 2</div>
+                    <h3 class="font-bold text-slate-800 mb-3 text-base">Periode Berjalan (Pembanding)</h3>
+                    <ul class="space-y-2">
+                        <li class="flex"><i class="fa-solid fa-caret-right text-emerald-500 mt-1 mr-2"></i> Buka Menu <strong>Monitoring</strong> &rarr; Pilih <strong>Semua Cluster</strong>.</li>
+                        <li class="flex"><i class="fa-solid fa-caret-right text-emerald-500 mt-1 mr-2"></i> Pilih Bansos <strong>PKH</strong>.</li>
+                        <li class="flex"><i class="fa-solid fa-caret-right text-emerald-500 mt-1 mr-2"></i> Pilih <strong>Periode Berjalan/Sekarang</strong> (Misal: Tahap 3).</li>
+                        <li class="flex"><i class="fa-solid fa-caret-right text-emerald-500 mt-1 mr-2"></i> Status Salur: Pilih <strong>Sudah SI</strong> (Atau status dengan data terbanyak).</li>
+                        <li class="flex"><i class="fa-solid fa-caret-right text-emerald-500 mt-1 mr-2"></i> Download data (Format CSV).</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6 mb-8">
+            <!-- File 1 Upload -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200" id="step2-file1" data-title="Upload File 1" data-intro="Pilih atau seret file CSV dari periode SEBELUMNYA ke area ini. Contoh file: 20260805121555_PKH...csv">
+                <h3 class="font-bold text-slate-800 mb-4 flex items-center text-lg">
+                    <span class="bg-blue-100 text-blue-700 w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">1</span> 
+                    Upload File 1 (Periode Lama)
+                </h3>
+                <div class="file-drop-area relative bg-slate-50/50 rounded-xl p-8 text-center cursor-pointer hover:bg-blue-50 group border-2 border-dashed border-slate-300 hover:border-blue-400" id="drop-area-1">
+                    <input type="file" id="file1" accept=".csv" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                    <div class="transform transition-transform group-hover:scale-110 group-hover:-translate-y-1">
+                        <i class="fa-solid fa-file-csv text-5xl text-blue-400 mb-4"></i>
+                    </div>
+                    <p class="text-slate-700 font-semibold mb-1" id="file1-name">Pilih file CSV atau tarik ke sini</p>
+                    <p class="text-sm text-slate-500" id="file1-info">Maksimal file ukuran besar didukung</p>
+                </div>
+                <div id="file1-status" class="mt-4 text-sm hidden p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center">
+                    <i class="fa-solid fa-circle-check mr-2 text-emerald-500 text-lg"></i> 
+                    <div>
+                        <span class="font-bold block">Berhasil dimuat!</span>
+                        <span class="status-text">0 baris data ditemukan</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- File 2 Upload -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200" id="step3-file2" data-title="Upload File 2" data-intro="Pilih atau seret file CSV dari periode SEKARANG ke area ini.">
+                <h3 class="font-bold text-slate-800 mb-4 flex items-center text-lg">
+                    <span class="bg-slate-100 text-slate-700 w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">2</span> 
+                    Upload File 2 (Periode Baru)
+                </h3>
+                <div class="file-drop-area relative bg-slate-50/50 rounded-xl p-8 text-center cursor-pointer hover:bg-emerald-50 group border-2 border-dashed border-slate-300 hover:border-emerald-400" id="drop-area-2">
+                    <input type="file" id="file2" accept=".csv" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                    <div class="transform transition-transform group-hover:scale-110 group-hover:-translate-y-1">
+                        <i class="fa-solid fa-file-csv text-5xl text-emerald-400 mb-4"></i>
+                    </div>
+                    <p class="text-slate-700 font-semibold mb-1" id="file2-name">Pilih file CSV atau tarik ke sini</p>
+                    <p class="text-sm text-slate-500" id="file2-info">Pastikan format kolom sama dengan File 1</p>
+                </div>
+                <div id="file2-status" class="mt-4 text-sm hidden p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center">
+                    <i class="fa-solid fa-circle-check mr-2 text-emerald-500 text-lg"></i> 
+                    <div>
+                        <span class="font-bold block">Berhasil dimuat!</span>
+                        <span class="status-text">0 baris data ditemukan</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8" id="step4-compare" data-title="Pilih Kunci & Bandingkan" data-intro="Sangat disarankan memilih NIK atau NO_KK sebagai kunci pembanding karena datanya unik. Setelah itu klik tombol Bandingkan Data.">
+            <div class="flex flex-col md:flex-row justify-between items-end gap-6">
+                <div class="w-full md:w-2/3">
+                    <label class="flex items-center text-sm font-bold text-slate-700 mb-2">
+                        <i class="fa-solid fa-key text-amber-500 mr-2"></i> Kolom Kunci Pembanding
+                    </label>
+                    <p class="text-sm text-slate-500 mb-3 bg-amber-50 p-3 rounded-lg border border-amber-100">
+                        Pilih kolom unik untuk mencocokkan data. <strong>Gunakan NIK atau NO_KK.</strong> Hindari menggunakan Nama karena rentan salah ketik (typo).
+                    </p>
+                    <select id="key-column" class="w-full border-2 border-slate-300 rounded-lg p-3 bg-white focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:bg-slate-100 outline-none transition-colors shadow-sm" disabled>
+                        <option value="">-- Muat file terlebih dahulu --</option>
+                    </select>
+                </div>
+                
+                <button id="btn-compare" class="w-full md:w-1/3 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg shadow-md transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-lg" disabled>
+                    <i class="fa-solid fa-gears mr-2"></i> Bandingkan Data
+                </button>
+            </div>
+        </div>
+
+        <div id="result-section" class="hidden animate-[fadeIn_0.5s_ease-out]">
+            <div class="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden" id="step5-result" data-title="Hasil & Download" data-intro="Di sini akan tampil data KPM yang ada di File 1 tetapi tidak ada di File 2. Anda bisa mendownload hasilnya ke dalam bentuk CSV baru.">
+                
+                <!-- Result Header -->
+                <div class="bg-slate-800 text-white p-6 flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold flex items-center">
+                            <i class="fa-solid fa-square-poll-horizontal mr-3 text-blue-400"></i> Hasil Analisis
+                        </h2>
+                        <p class="text-slate-300 mt-2 text-sm" id="result-summary">Ditemukan <span class="font-bold text-red-400 text-lg px-1">0</span> data yang ada di File 1 (Lama) tetapi <strong>TIDAK DITEMUKAN</strong> di File 2 (Baru).</p>
+                    </div>
+                    <button id="btn-download" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-colors flex items-center whitespace-nowrap">
+                        <i class="fa-solid fa-file-excel mr-2"></i> Download Excel (.xlsx)
+                    </button>
+                </div>
+
+                <!-- Data Table -->
+                <div class="table-container p-0 bg-white">
+                    <table class="w-full text-sm text-left text-slate-600 whitespace-nowrap min-w-max">
+                        <thead class="text-xs text-slate-700 uppercase bg-slate-50" id="table-head">
+                            <!-- Headers injected via JS -->
+                        </thead>
+                        <tbody id="table-body" class="divide-y divide-slate-200">
+                            <!-- Data injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Empty State (if all match) -->
+                <div id="empty-state" class="hidden p-16 text-center bg-white">
+                    <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-emerald-100 text-emerald-500 mb-6 shadow-inner">
+                        <i class="fa-solid fa-check-double text-5xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-slate-800 mb-2">Semua Data Ditemukan!</h3>
+                    <p class="text-slate-500 max-w-md mx-auto">Tidak ada KPM yang hilang. Semua data yang ada di File 1 juga terdapat di File 2 berdasarkan kunci yang dipilih.</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal Message -->
+    <div id="message-modal" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-[100] backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl transform scale-100 transition-transform">
+            <div class="text-center">
+                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 text-red-600 mb-4" id="modal-icon">
+                    <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900 mb-2" id="modal-title">Peringatan</h3>
+                <p class="text-slate-600 mb-8" id="modal-message">Terjadi kesalahan.</p>
+                <button id="close-modal" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm">
+                    Mengerti
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-slate-800 text-slate-400 py-8 mt-auto border-t border-slate-700">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-sm">
+                Alat bantu perbandingan data <strong>CSV SIK NG</strong> &bull; Dibuat agar pekerjaan lebih cepat dan akurat.
+            </p>
+            <p class="text-xs mt-2 opacity-60">
+                Data diproses secara lokal di browser Anda. Tidak ada data yang diunggah ke server.
+            </p>
+        </div>
+    </footer>
+
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // State Application
+            let state = {
+                dataFile1: [],
+                dataFile2: [],
+                headers: [], // Based on file 1
+                missingData: [],
+                fileName1: '',
+                fileName2: ''
+            };
+
+            // DOM Elements
+            const els = {
+                fileInput1: document.getElementById('file1'),
+                fileInput2: document.getElementById('file2'),
+                dropArea1: document.getElementById('drop-area-1'),
+                dropArea2: document.getElementById('drop-area-2'),
+                fileName1: document.getElementById('file1-name'),
+                fileName2: document.getElementById('file2-name'),
+                fileInfo1: document.getElementById('file1-info'),
+                fileInfo2: document.getElementById('file2-info'),
+                status1: document.getElementById('file1-status'),
+                status2: document.getElementById('file2-status'),
+                keyColumnSelect: document.getElementById('key-column'),
+                btnCompare: document.getElementById('btn-compare'),
+                resultSection: document.getElementById('result-section'),
+                tableHead: document.getElementById('table-head'),
+                tableBody: document.getElementById('table-body'),
+                resultSummary: document.getElementById('result-summary'),
+                btnDownload: document.getElementById('btn-download'),
+                emptyState: document.getElementById('empty-state'),
+                startTourBtn: document.getElementById('start-tour'),
+                modal: document.getElementById('message-modal'),
+                modalTitle: document.getElementById('modal-title'),
+                modalMessage: document.getElementById('modal-message'),
+                modalIcon: document.getElementById('modal-icon'),
+                closeModalBtn: document.getElementById('close-modal')
+            };
+
+            // Helper: Show Modal Message
+            const showMessage = (title, message, type = 'error') => {
+                els.modalTitle.textContent = title;
+                els.modalMessage.textContent = message;
+                
+                if (type === 'error') {
+                    els.modalIcon.className = "mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 text-red-600 mb-4";
+                    els.modalIcon.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-3xl"></i>';
+                } else if (type === 'success') {
+                    els.modalIcon.className = "mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-emerald-100 text-emerald-600 mb-4";
+                    els.modalIcon.innerHTML = '<i class="fa-solid fa-circle-check text-3xl"></i>';
+                } else {
+                    els.modalIcon.className = "mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-blue-100 text-blue-600 mb-4";
+                    els.modalIcon.innerHTML = '<i class="fa-solid fa-circle-info text-3xl"></i>';
+                }
+                
+                els.modal.classList.remove('hidden');
+                els.modal.classList.add('flex');
+            };
+
+            els.closeModalBtn.addEventListener('click', () => {
+                els.modal.classList.add('hidden');
+                els.modal.classList.remove('flex');
+            });
+
+            // Format number helpers
+            const formatNumber = (num) => {
+                return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+            };
+
+            // Enable Compare button if both files exist
+            const evaluateReadyState = () => {
+                if (state.dataFile1.length > 0 && state.dataFile2.length > 0) {
+                    els.keyColumnSelect.disabled = false;
+                    els.btnCompare.disabled = false;
+                } else {
+                    els.keyColumnSelect.disabled = true;
+                    els.btnCompare.disabled = true;
+                }
+            };
+
+            const populateColumnsDropdown = (headers) => {
+                // Only populate if empty or resetting
+                if(els.keyColumnSelect.options.length <= 1) {
+                    els.keyColumnSelect.innerHTML = '<option value="">-- Pilih Kolom Kunci --</option>';
+                    
+                    let foundNik = false;
+                    
+                    headers.forEach(header => {
+                        const option = document.createElement('option');
+                        option.value = header;
+                        option.textContent = header;
+                        els.keyColumnSelect.appendChild(option);
+                        
+                        // Heuristics: Auto-select NIK if it exists
+                        const headerUpper = header.toUpperCase();
+                        if(headerUpper === 'NIK' || headerUpper === 'NO_KTP' || headerUpper === 'NOMOR_KTP' || headerUpper.includes('NIK')) {
+                            option.selected = true;
+                            foundNik = true;
+                        }
+                    });
+
+                    // If NIK not found, try NO_KK
+                    if(!foundNik) {
+                        Array.from(els.keyColumnSelect.options).forEach(opt => {
+                            const valUpper = opt.value.toUpperCase();
+                            if(valUpper === 'NO_KK' || valUpper === 'NO KK' || valUpper.includes('KK')) {
+                                opt.selected = true;
+                            }
+                        });
+                    }
+                }
+            };
+
+            const processFile = (file, isFile1) => {
+                if (!file.name.toLowerCase().endsWith('.csv')) {
+                    showMessage("Format File Salah", "Harap unggah file dengan format .csv", "error");
+                    return;
+                }
+
+                // Update UI visually during processing
+                const nameEl = isFile1 ? els.fileName1 : els.fileName2;
+                const infoEl = isFile1 ? els.fileInfo1 : els.fileInfo2;
+                const statusEl = isFile1 ? els.status1 : els.status2;
+                
+                nameEl.textContent = "Memproses...";
+                infoEl.textContent = "Membaca data: " + file.name;
+                
+                // Use PapaParse to parse the CSV
+                Papa.parse(file, {
+                    header: true, // First row is header
+                    skipEmptyLines: 'greedy', // Skip completely empty lines
+                    complete: function(results) {
+                        if (results.errors.length > 0 && results.data.length === 0) {
+                            showMessage("Gagal Membaca CSV", "File gagal diproses. Pastikan file bukan korup dan berformat CSV murni.", "error");
+                            nameEl.textContent = "Pilih file CSV atau tarik ke sini";
+                            infoEl.textContent = "Format tidak didukung";
+                            statusEl.classList.add('hidden');
+                            return;
+                        }
+
+                        // Update State and UI
+                        if (isFile1) {
+                            state.dataFile1 = results.data;
+                            state.headers = results.meta.fields;
+                            state.fileName1 = file.name;
+                            
+                            populateColumnsDropdown(state.headers);
+                            
+                            nameEl.textContent = file.name;
+                            nameEl.classList.add("text-blue-700");
+                            statusEl.querySelector('.status-text').textContent = `${formatNumber(state.dataFile1.length)} baris data berhasil dimuat.`;
+                            statusEl.classList.remove('hidden');
+                        } else {
+                            state.dataFile2 = results.data;
+                            state.fileName2 = file.name;
+                            
+                            nameEl.textContent = file.name;
+                            nameEl.classList.add("text-emerald-700");
+                            statusEl.querySelector('.status-text').textContent = `${formatNumber(state.dataFile2.length)} baris data berhasil dimuat.`;
+                            statusEl.classList.remove('hidden');
+                        }
+                        
+                        evaluateReadyState();
+                    },
+                    error: function(err) {
+                        showMessage("Error Internal", "Gagal membaca file: " + err.message, "error");
+                    }
+                });
+            };
+
+            // Event Listeners for Input Change
+            els.fileInput1.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) processFile(e.target.files[0], true);
+            });
+
+            els.fileInput2.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) processFile(e.target.files[0], false);
+            });
+
+            // Drag and Drop Logic
+            const setupDragDrop = (dropArea, inputElement) => {
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropArea.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }, false);
+                });
+
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropArea.addEventListener(eventName, () => {
+                        dropArea.classList.add('drag-over');
+                        dropArea.classList.add('scale-105');
+                    }, false);
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropArea.addEventListener(eventName, () => {
+                        dropArea.classList.remove('drag-over');
+                        dropArea.classList.remove('scale-105');
+                    }, false);
+                });
+
+                dropArea.addEventListener('drop', (e) => {
+                    const dt = e.dataTransfer;
+                    if(dt.files.length > 0) {
+                        inputElement.files = dt.files;
+                        inputElement.dispatchEvent(new Event('change'));
+                    }
+                }, false);
+            };
+
+            setupDragDrop(els.dropArea1, els.fileInput1);
+            setupDragDrop(els.dropArea2, els.fileInput2);
+
+            els.btnCompare.addEventListener('click', () => {
+                const keyColumn = els.keyColumnSelect.value;
+                
+                if (!keyColumn) {
+                    showMessage("Pilih Kunci", "Silakan pilih kolom kunci pembanding (misal: NIK) terlebih dahulu.", "info");
+                    els.keyColumnSelect.focus();
+                    return;
+                }
+
+                // Initial validation: does key exist in File 1?
+                if (state.dataFile1.length > 0 && !state.dataFile1[0].hasOwnProperty(keyColumn)) {
+                    showMessage("Kolom Tidak Valid", `Kolom '${keyColumn}' tidak ditemukan di struktur File 1.`, "error");
+                    return;
+                }
+
+                // Show loading state on button
+                const originalBtnText = els.btnCompare.innerHTML;
+                els.btnCompare.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Memproses Data...';
+                els.btnCompare.disabled = true;
+
+                // Use setTimeout to allow UI to update to loading state before heavy processing
+                setTimeout(() => {
+                    // PERFORMANCE OPTIMIZATION: Use a Set for O(1) lookups
+                    const keysInFile2 = new Set();
+                    let missingColWarningFired = false;
+
+                    // 1. Build the lookup dictionary from File 2
+                    for (let i = 0; i < state.dataFile2.length; i++) {
+                        const row = state.dataFile2[i];
+                        if (row[keyColumn] !== undefined) {
+                            // Trim spaces and uppercase to ensure matching is robust
+                            const val = String(row[keyColumn]).trim().toUpperCase();
+                            if(val !== "") keysInFile2.add(val);
+                        } else if (!missingColWarningFired) {
+                            missingColWarningFired = true;
+                            console.warn(`Peringatan: Kolom '${keyColumn}' tidak ada di beberapa baris File 2.`);
+                        }
+                    }
+
+                    // 2. Clear previous results
+                    state.missingData = [];
+
+                    // 3. Find rows in File 1 where the key is NOT in File 2's Set
+                    for (let i = 0; i < state.dataFile1.length; i++) {
+                        const row = state.dataFile1[i];
+                        const keyValRaw = row[keyColumn];
+                        
+                        if (keyValRaw !== undefined) {
+                            const val = String(keyValRaw).trim().toUpperCase();
+                            
+                            // Skip completely empty key values (likely empty CSV lines at end)
+                            if (val === "") continue;
+
+                            // If File 2 does not have this key, it's missing!
+                            if (!keysInFile2.has(val)) {
+                                state.missingData.push(row);
+                            }
+                        }
+                    }
+
+                    // Done processing. Render UI.
+                    renderTable();
+                    
+                    // Reset button state
+                    els.btnCompare.innerHTML = originalBtnText;
+                    els.btnCompare.disabled = false;
+                    
+                    // Tampilkan Popup Notifikasi Hasil
+                    if (state.missingData.length > 0) {
+                        showMessage(
+                            "Perbandingan Selesai",
+                            `Ditemukan ${formatNumber(state.missingData.length)} data. Data yang ditemukan adalah data Exclude dan Data KPM baru masuk sebagai peserta.`,
+                            "info"
+                        );
+                    } else {
+                        showMessage(
+                            "Perbandingan Selesai",
+                            "Semua data File 1 ditemukan di File 2. Tidak ada data yang hilang.",
+                            "success"
+                        );
+                    }
+                    
+                }, 50); // 50ms delay is enough for browser to paint loading state
+            });
+
+            const renderTable = () => {
+                els.resultSection.classList.remove('hidden');
+                
+                // Update Summary text
+                els.resultSummary.innerHTML = `Berdasarkan kolom kunci <strong>${els.keyColumnSelect.value}</strong>, ditemukan <span class="font-bold text-red-400 text-lg px-1">${formatNumber(state.missingData.length)}</span> data yang ada di File 1 tetapi <strong>TIDAK DITEMUKAN</strong> di File 2.`;
+
+                // Handle Empty State (All matched)
+                if (state.missingData.length === 0) {
+                    document.querySelector('.table-container').classList.add('hidden');
+                    els.btnDownload.classList.add('hidden');
+                    els.emptyState.classList.remove('hidden');
+                    els.resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    return;
+                }
+
+                // Prepare table visibility
+                document.querySelector('.table-container').classList.remove('hidden');
+                els.btnDownload.classList.remove('hidden');
+                els.emptyState.classList.add('hidden');
+
+                // 1. Render Table Headers
+                els.tableHead.innerHTML = '';
+                const trHead = document.createElement('tr');
+                
+                // No. Column (Sticky)
+                const thIdx = document.createElement('th');
+                thIdx.className = 'px-4 py-3 sticky-col text-center w-16';
+                thIdx.textContent = 'No';
+                trHead.appendChild(thIdx);
+
+                // Priority columns to display first
+                const priorityCols = ['NAMA', 'NAMA_PENGURUS', 'NAMA_PENGURUS_PKH', 'NIK', 'NO_KK', 'STATUS', 'ID_BDT'];
+                let orderedHeaders = [...state.headers];
+                
+                // Sort headers: priority columns first
+                orderedHeaders.sort((a, b) => {
+                    const aUpper = a.toUpperCase();
+                    const bUpper = b.toUpperCase();
+                    
+                    let aPriority = priorityCols.findIndex(col => aUpper === col || aUpper.includes(col));
+                    let bPriority = priorityCols.findIndex(col => bUpper === col || bUpper.includes(col));
+                    
+                    if (aPriority === -1) aPriority = 999;
+                    if (bPriority === -1) bPriority = 999;
+                    
+                    return aPriority - bPriority;
+                });
+
+                // Display up to 12 columns in UI to prevent horizontal scrolling hell. Download gets all.
+                const displayHeaders = orderedHeaders.slice(0, 12);
+
+                displayHeaders.forEach(header => {
+                    const th = document.createElement('th');
+                    th.className = 'px-6 py-3 tracking-wider';
+                    
+                    // Highlight the key column
+                    if (header === els.keyColumnSelect.value) {
+                        th.innerHTML = `<i class="fa-solid fa-key text-amber-500 mr-1"></i> ${header}`;
+                    } else {
+                        th.textContent = header;
+                    }
+                    trHead.appendChild(th);
+                });
+                
+                if (orderedHeaders.length > 12) {
+                    const th = document.createElement('th');
+                    th.className = 'px-6 py-3 italic font-normal bg-slate-100';
+                    th.textContent = `(+${orderedHeaders.length - 12} Kolom Lainnya)`;
+                    trHead.appendChild(th);
+                }
+
+                els.tableHead.appendChild(trHead);
+
+                // 2. Render Table Body (Virtualize/Limit rows to prevent browser crash)
+                els.tableBody.innerHTML = '';
+                
+                // Max rows to render in HTML table
+                const RENDER_LIMIT = 200; 
+                const dataToRender = state.missingData.slice(0, RENDER_LIMIT);
+                
+                dataToRender.forEach((row, index) => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-blue-50 transition-colors group';
+                    
+                    // No. Cell (Sticky)
+                    const tdIdx = document.createElement('td');
+                    tdIdx.className = 'px-4 py-3 text-center text-slate-500 font-medium sticky-col group-hover:bg-blue-50 transition-colors border-r border-slate-100';
+                    tdIdx.textContent = index + 1;
+                    tr.appendChild(tdIdx);
+
+                    // Data cells
+                    displayHeaders.forEach(header => {
+                        const td = document.createElement('td');
+                        td.className = 'px-6 py-3';
+                        let val = row[header] !== undefined ? row[header] : '-';
+                        
+                        // Formatting logic
+                        if (val === '') val = '-';
+                        
+                        // If it's a number-like string and looks like NIK/KK, format as mono
+                        const isIdentifier = header.toUpperCase().includes('NIK') || header.toUpperCase().includes('KK') || header.toUpperCase().includes('KTP');
+                        if (isIdentifier && val !== '-') {
+                            td.innerHTML = `<span class="font-mono text-blue-700 bg-blue-50 px-2 py-1 rounded">${val}</span>`;
+                        } else {
+                            td.textContent = val;
+                        }
+                        
+                        tr.appendChild(td);
+                    });
+                    
+                    // Placeholder cell for extra columns
+                    if (orderedHeaders.length > 12) {
+                         const td = document.createElement('td');
+                         td.className = 'px-6 py-3 bg-slate-50/50';
+                         td.textContent = '...';
+                         tr.appendChild(td);
+                    }
+
+                    els.tableBody.appendChild(tr);
+                });
+
+                // Indicate if data is truncated in UI
+                if (state.missingData.length > RENDER_LIMIT) {
+                    const tr = document.createElement('tr');
+                    const td = document.createElement('td');
+                    td.colSpan = displayHeaders.length + 2;
+                    td.className = 'px-6 py-5 text-center text-slate-600 bg-amber-50 border-t border-amber-200';
+                    td.innerHTML = `<i class="fa-solid fa-eye-slash mr-2 text-amber-500"></i> Hanya menampilkan <strong>${RENDER_LIMIT}</strong> data pertama di tabel agar browser tidak berat. <br/>Silakan klik <strong>Download Excel</strong> untuk melihat keseluruhan <strong>${formatNumber(state.missingData.length)}</strong> data lengkap.`;
+                    tr.appendChild(td);
+                    els.tableBody.appendChild(tr);
+                }
+                
+                // Scroll down to results
+                setTimeout(() => {
+                    els.resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            };
+
+            els.btnDownload.addEventListener('click', () => {
+                if (state.missingData.length === 0) return;
+
+                // 1. Buat Workbook (File Excel) baru
+                const wb = XLSX.utils.book_new();
+                
+                // 2. Ubah data JSON array menjadi Worksheet
+                const ws = XLSX.utils.json_to_sheet(state.missingData);
+                
+                // 3. Tambahkan Worksheet ke Workbook dengan nama tab "Data Tidak Cair"
+                XLSX.utils.book_append_sheet(wb, ws, "Data Tidak Cair");
+                
+                // 4. Generate nama file yang dinamis berdasarkan waktu
+                const now = new Date();
+                const d = String(now.getDate()).padStart(2, '0');
+                const m = String(now.getMonth() + 1).padStart(2, '0');
+                const y = now.getFullYear();
+                const h = String(now.getHours()).padStart(2, '0');
+                const min = String(now.getMinutes()).padStart(2, '0');
+                
+                const filename = `Data_Tidak_Cair_PKH_${y}${m}${d}_${h}${min}.xlsx`;
+
+                // 5. Trigger download file Excel
+                XLSX.writeFile(wb, filename);
+            });
+
+            const startTour = () => {
+                const tour = introJs();
+                tour.setOptions({
+                    nextLabel: 'Selanjutnya &rarr;',
+                    prevLabel: '&larr; Kembali',
+                    skipLabel: 'Tutup',
+                    doneLabel: 'Selesai!',
+                    showProgress: true,
+                    showBullets: false,
+                    overlayOpacity: 0.7,
+                    disableInteraction: false // Allow clicking during tour if needed
+                });
+
+                tour.start();
+            };
+
+            els.startTourBtn.addEventListener('click', startTour);
+
+            // Auto-start tour on very first visit
+            if (!localStorage.getItem('pkh_tour_completed')) {
+                setTimeout(() => {
+                    startTour();
+                    localStorage.setItem('pkh_tour_completed', 'true');
+                }, 800); // Slight delay for smoother loading
+            }
+        });
+    </script>
+</body>
+</html>
