@@ -101,18 +101,12 @@ export const Widgets: React.FC<WidgetsProps> = ({
           </div>
         </div>
 
-        {/* Right: Donation Info & Portal Link */}
+        {/* Right: Donation Info */}
         <div className="flex flex-col items-center md:items-end text-center md:text-right">
           <div className="flex items-center gap-2 text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-3.5 py-1.5 rounded-2xl shadow-md">
             <Heart size={14} className="text-rose-400 shrink-0 animate-pulse" />
             <span>Jika aplikasi ini berguna donasi seikhlasnya ke akun Dana 085270444156</span>
           </div>
-          <button
-            onClick={onOpenAdmin}
-            className="mt-1.5 text-xs text-amber-400 hover:text-amber-300 underline flex items-center gap-1 font-medium"
-          >
-            Kelola Portal (Ctrl+Shift+Alt+A)
-          </button>
         </div>
       </div>
 
