@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Sun, Cloud, Calendar, Sparkles, Megaphone, Layers, Clock, Heart } from 'lucide-react';
+import { Search, Sun, Cloud, Calendar, Sparkles, Megaphone, Layers, Heart } from 'lucide-react';
 import { AndroidTheme } from '../types/portal';
 
 interface WidgetsProps {
@@ -71,7 +71,7 @@ export const Widgets: React.FC<WidgetsProps> = ({
       {/* Main Clock & Weather Android Card */}
       <div className="bg-black/35 backdrop-blur-xl border border-white/10 rounded-3xl p-6 text-white shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 transition hover:border-white/20">
         {/* Left: Clock (Conditional Display) */}
-        {showClock ? (
+        {showClock && (
           <div className="flex flex-col items-center md:items-start text-center md:text-left">
             <div className="text-5xl sm:text-6xl font-light tracking-tight text-white font-mono drop-shadow-md">
               {timeFormatted}
@@ -80,11 +80,6 @@ export const Widgets: React.FC<WidgetsProps> = ({
               <Calendar size={15} className="text-amber-400" />
               <span>{dateFormatted}</span>
             </div>
-          </div>
-        ) : (
-          <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-4 py-2.5 rounded-2xl text-xs text-white/70">
-            <Clock size={16} className="text-amber-400 shrink-0" />
-            <span>Tampilan Jam Disembunyikan (Atur di Admin/Settings)</span>
           </div>
         )}
 
