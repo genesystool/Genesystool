@@ -30,6 +30,7 @@ import { NotificationPanel } from './components/NotificationPanel';
 import { SettingsModal, WALLPAPERS } from './components/SettingsModal';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { AdminDashboard } from './components/AdminDashboard';
+import { InstallAndroidModal } from './components/InstallAndroidModal';
 
 export default function App() {
   // Menu items state synced with Firestore
@@ -45,6 +46,10 @@ export default function App() {
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isAppDrawerOpen, setIsAppDrawerOpen] = useState<boolean>(false);
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState<boolean>(false);
+
+  // PWA Install Prompt State
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   // Active opened app modal
   const [activeApp, setActiveApp] = useState<MenuItem | null>(null);
@@ -92,6 +97,27 @@ export default function App() {
     });
     return () => unsubscribeAuth();
   }, []);
+
+  // Listen for PWA beforeinstallprompt event
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
+  const handleTriggerInstallPrompt = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+      setIsInstallModalOpen(false);
+    }
+  };
 
   // 2. Real-Time Firestore Menu Collection Listener
   useEffect(() => {
@@ -291,6 +317,7 @@ export default function App() {
         }
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenAdmin={handleTriggerAdmin}
+        onOpenInstallModal={() => setIsInstallModalOpen(true)}
         unreadCount={notifications.filter((n) => !n.read).length}
         isAdminLoggedIn={Boolean(currentUser)}
       />
@@ -307,6 +334,7 @@ export default function App() {
           categories={categories}
           onSelectCategory={setActiveCategory}
           onOpenAdmin={handleTriggerAdmin}
+          onOpenInstallModal={() => setIsInstallModalOpen(true)}
         />
 
         {/* Loading Indicator or App Grid */}
@@ -365,6 +393,7 @@ export default function App() {
           setIsNotificationPanelOpen(false);
           handleTriggerAdmin();
         }}
+        onOpenInstallModal={() => setIsInstallModalOpen(true)}
         isAdminLoggedIn={Boolean(currentUser)}
       />
 
@@ -394,6 +423,14 @@ export default function App() {
         userEmail={currentUser?.email || null}
         theme={theme}
         onUpdateTheme={(updated) => setTheme({ ...theme, ...updated })}
+      />
+
+      {/* 10. Install Android Application Modal */}
+      <InstallAndroidModal
+        isOpen={isInstallModalOpen}
+        onClose={() => setIsInstallModalOpen(false)}
+        deferredPrompt={deferredPrompt}
+        onTriggerPrompt={handleTriggerInstallPrompt}
       />
     </div>
   );

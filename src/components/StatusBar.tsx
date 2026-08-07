@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Wifi, BatteryCharging, Bell, Settings, ShieldAlert, Sparkles } from 'lucide-react';
+import { Wifi, BatteryCharging, Bell, Settings, ShieldAlert, Sparkles, Download, Smartphone } from 'lucide-react';
 
 interface StatusBarProps {
   onToggleNotificationPanel: () => void;
   onOpenSettings: () => void;
   onOpenAdmin: () => void;
+  onOpenInstallModal?: () => void;
   unreadCount: number;
   isAdminLoggedIn: boolean;
 }
@@ -13,6 +14,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   onToggleNotificationPanel,
   onOpenSettings,
   onOpenAdmin,
+  onOpenInstallModal,
   unreadCount,
   isAdminLoggedIn,
 }) => {
@@ -45,14 +47,37 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         )}
       </div>
 
-      {/* Center: Quick Notice / Hint */}
-      <div className="hidden md:flex items-center space-x-1 text-[11px] text-white/50 bg-white/5 px-3 py-0.5 rounded-full">
-        <Sparkles size={11} className="text-amber-400" />
-        <span>Akses Admin: <kbd className="bg-white/10 text-amber-300 font-mono px-1 rounded text-[10px]">Ctrl+Shift+Alt+A</kbd></span>
+      {/* Center: Quick Notice / Hint & Install Android Button */}
+      <div className="hidden md:flex items-center space-x-2 text-[11px]">
+        {onOpenInstallModal && (
+          <button
+            onClick={onOpenInstallModal}
+            className="flex items-center space-x-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-black font-extrabold px-2.5 py-0.5 rounded-full shadow-md transition active:scale-95 animate-pulse"
+            title="Instal Aplikasi ke HP Android"
+          >
+            <Download size={12} />
+            <span>Instal di Android</span>
+          </button>
+        )}
+        <div className="flex items-center space-x-1 text-white/50 bg-white/5 px-3 py-0.5 rounded-full">
+          <Sparkles size={11} className="text-amber-400" />
+          <span>Akses Admin: <kbd className="bg-white/10 text-amber-300 font-mono px-1 rounded text-[10px]">Ctrl+Shift+Alt+A</kbd></span>
+        </div>
       </div>
 
-      {/* Right: Icons (Wifi, Battery, Notifications, Settings) */}
+      {/* Right: Icons (Wifi, Battery, Install Android, Notifications, Settings) */}
       <div className="flex items-center space-x-2 sm:space-x-3">
+        {onOpenInstallModal && (
+          <button
+            onClick={onOpenInstallModal}
+            className="md:hidden flex items-center gap-1 bg-emerald-500 text-black font-extrabold px-2 py-0.5 rounded-full text-[10px] transition active:scale-95"
+            title="Instal Aplikasi"
+          >
+            <Download size={11} />
+            <span>Instal</span>
+          </button>
+        )}
+
         <button
           onClick={onToggleNotificationPanel}
           className="relative p-1 hover:bg-white/10 rounded transition text-white/80 hover:text-white"

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Sun, Cloud, Calendar, Sparkles, Megaphone, Layers, Heart } from 'lucide-react';
+import { Search, Sun, Cloud, Calendar, Sparkles, Megaphone, Layers, Heart, Download } from 'lucide-react';
 import { AndroidTheme } from '../types/portal';
 
 interface WidgetsProps {
@@ -11,6 +11,7 @@ interface WidgetsProps {
   categories: string[];
   onSelectCategory: (category: string) => void;
   onOpenAdmin: () => void;
+  onOpenInstallModal?: () => void;
 }
 
 export const Widgets: React.FC<WidgetsProps> = ({
@@ -22,6 +23,7 @@ export const Widgets: React.FC<WidgetsProps> = ({
   categories,
   onSelectCategory,
   onOpenAdmin,
+  onOpenInstallModal,
 }) => {
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
 
@@ -96,8 +98,17 @@ export const Widgets: React.FC<WidgetsProps> = ({
           </div>
         </div>
 
-        {/* Right: Donation Info */}
-        <div className="flex flex-col items-center md:items-end text-center md:text-right">
+        {/* Right: Donation Info & Install Button */}
+        <div className="flex flex-col items-center md:items-end text-center md:text-right gap-2">
+          {onOpenInstallModal && (
+            <button
+              onClick={onOpenInstallModal}
+              className="px-4 py-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-black font-black text-xs rounded-2xl shadow-lg transition active:scale-95 flex items-center gap-2 border border-emerald-400/50"
+            >
+              <Download size={16} />
+              <span>Instal Aplikasi di Android</span>
+            </button>
+          )}
           <div className="flex items-center gap-2 text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-3.5 py-1.5 rounded-2xl shadow-md">
             <Heart size={14} className="text-rose-400 shrink-0 animate-pulse" />
             <span>Jika aplikasi ini berguna donasi seikhlasnya ke akun Dana 085270444156</span>

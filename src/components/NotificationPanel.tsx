@@ -14,6 +14,7 @@ import {
   Volume2,
   Bluetooth,
   Smartphone,
+  Download,
 } from 'lucide-react';
 import { AndroidTheme, AppNotification } from '../types/portal';
 
@@ -26,6 +27,7 @@ interface NotificationPanelProps {
   onUpdateTheme: (newTheme: Partial<AndroidTheme>) => void;
   onOpenSettings: () => void;
   onOpenAdmin: () => void;
+  onOpenInstallModal?: () => void;
   isAdminLoggedIn: boolean;
 }
 
@@ -38,6 +40,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
   onUpdateTheme,
   onOpenSettings,
   onOpenAdmin,
+  onOpenInstallModal,
   isAdminLoggedIn,
 }) => {
   if (!isOpen) return null;
@@ -135,6 +138,30 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
               </button>
             </div>
           </div>
+
+          {/* Install Android Card */}
+          {onOpenInstallModal && (
+            <div className="mb-3 p-3 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-2xl border border-emerald-500/40 flex items-center justify-between text-xs shrink-0 shadow-md">
+              <div className="flex items-center gap-2">
+                <Download size={18} className="text-emerald-400 shrink-0 animate-bounce" />
+                <div>
+                  <div className="font-bold text-emerald-200">Instal Aplikasi di Android</div>
+                  <div className="text-[10px] text-white/70">
+                    Pasang ke Layar Utama HP tanpa PlayStore
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenInstallModal();
+                }}
+                className="px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-extrabold rounded-xl text-[11px] shadow"
+              >
+                Instal
+              </button>
+            </div>
+          )}
 
           {/* Admin Hint Card */}
           <div className="my-3 p-3 bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-2xl border border-amber-500/30 flex items-center justify-between text-xs shrink-0">
